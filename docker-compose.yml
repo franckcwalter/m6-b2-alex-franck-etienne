@@ -1,7 +1,3 @@
-# docker-compose.yml — SQUELETTE À COMPLÉTER
-# Le service `model`, `prometheus` et `grafana` sont câblés.
-# À vous d'ajouter `backend` et `frontend` (cf. TODO).
-
 services:
   model:
     build: ./services/model
