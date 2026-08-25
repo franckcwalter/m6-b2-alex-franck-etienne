@@ -1,150 +1,225 @@
 # M5-B1 + M5-B2 — Pyrenex Prod (architecture, CI/CD, monitoring, éval continue)
 
-> **Repo template GitHub.** Un·e des 2 du binôme clique **« Use this
-> template »** → `M5-B1-pyrenex-prod-<binome>`, puis ajoute l'autre comme
-> collaborateur. Vous partez du **scoring v2** (modèle M1 fourni) et vous le
-> mettez en **production complète** : 3 services orchestrés, CI/CD, monitoring
-> Grafana, runbook, puis (B2) évaluation continue + tracking MLflow.
+Pyrenex Prod est une application de scoring de risque crédit composée de trois services applicatifs conteneurisés : une interface web statique servie par nginx, une API backend FastAPI et une API FastAPI dédiée au modèle de machine learning. Prometheus collecte leurs métriques et Grafana fournit un dashboard de supervision provisionné automatiquement.
 
----
+## Démarrage
 
-## 🧭 Votre brief en un coup d'œil
+### Prérequis
 
-**Ce README est votre document de pilotage unique** — tout ce qu'il faut faire,
-dans l'ordre, avec le bon appui. Les autres supports ont chacun un rôle précis :
+- Docker avec Docker Compose ;
+- Python 3.11 ou supérieur pour exécuter les tests localement.
 
-| Support | Rôle |
-|---|---|
-| **Simplonline** | Le contrat : contexte client, livrables, critères de performance |
-| **Ce README** | Le pilotage : quoi faire, quand, avec quel mini-cours |
-| [`ressources/`](./ressources/) | Les 8 mini-cours d'appui (index dans [`ressources/README.md`](./ressources/README.md)) |
-| **Discord `fil-M5`** | Annonces + questions |
-
-### M5-B1 — les 2 jours sync (binôme)
-
-| Quand | Tâche | Durée | Appui |
-|---|---|---|---|
-| Mardi 9h15 | 1. Appropriation de la reprise M1 (modèle + API fournis) | 30 min | — |
-| Mardi 10h00 | 2. Architecture 3 services (`model` / `backend` / `frontend`) | 1h30 | [`01_Docker_compose`](./ressources/01_Docker_compose_multiservices_essentiel.md) |
-| Mardi 12h15 | 3. Vérification `docker compose up` | 15 min | [`01_Docker_compose`](./ressources/01_Docker_compose_multiservices_essentiel.md) |
-| Mardi 12h30 | 4. 🍽️ Déjeuner | 1h | — |
-| Mardi 13h30 | 5. Pipeline CI/CD GitHub Actions + *quality gate* | 2h30 | [`03_GitHub_Actions`](./ressources/03_GitHub_Actions_CI_CD_essentiel.md) — appui [`06_Pair_coding`](./ressources/06_Pair_coding_sync_long_essentiel.md) |
-| Mardi 16h45 | 6. Mur réflexif intermédiaire | 15 min | — |
-| Mercredi 9h15 | 7. Endpoint `/metrics` + métriques métier | 30 min | [`02_FastAPI_metrics_Prometheus`](./ressources/02_FastAPI_metrics_Prometheus_essentiel.md) |
-| Mercredi 9h45 | 8. Prometheus + Grafana dans le compose | 30 min | [`02_FastAPI_metrics_Prometheus`](./ressources/02_FastAPI_metrics_Prometheus_essentiel.md) |
-| Mercredi 10h25 | 9. Dashboard Grafana custom (vie / vitesse / comportement) | 40 min | [`04_Grafana_dashboard`](./ressources/04_Grafana_dashboard_custom_essentiel.md) |
-| Mercredi 11h00 | 10. Runbook d'astreinte (4 procédures) | 30 min | [`05_Runbook_astreinte`](./ressources/05_Runbook_astreinte_essentiel.md) |
-| Mercredi 11h30 | 11. **Tour de table binômes** (démo compose + dashboard) | 1h | — |
-| Mercredi 12h30 | 12. Mur réflexif final M5-B1 | 30 min | — |
-
-### M5-B2 — l'async individuel (jeudi + vendredi matin, 6 h)
-
-Vous repartez **chacun·e** du repo binôme, dans une branche perso
-`<prenom>/m5-b2-eval-continue`. Pas de nouveau repo.
-
-| Étape | Durée | Appui |
-|---|---|---|
-| 1. Constituer le jeu de référence (`data/reference_set.csv`, ~500 lignes) | 1h | [`08_Evaluation_continue_seuils`](./ressources/08_Evaluation_continue_seuils_essentiel.md) |
-| 2. Écrire `scripts/evaluate_model.py` (code retour 0 / non-zéro) | 2h | [`08_Evaluation_continue_seuils`](./ressources/08_Evaluation_continue_seuils_essentiel.md) |
-| 3. Tracer chaque run dans **MLflow** (local, `mlruns/`) | 1h | [`07_MLflow_tracking`](./ressources/07_MLflow_tracking_essentiel.md) |
-| 4. Documenter les seuils (`evaluation_thresholds.md`) | 1h | [`08_Evaluation_continue_seuils`](./ressources/08_Evaluation_continue_seuils_essentiel.md) |
-| 5. Étape `evaluate-model` bloquante dans la CI + tests | 1h | [`03_GitHub_Actions`](./ressources/03_GitHub_Actions_CI_CD_essentiel.md) |
-
-### ✅ Checklist livrables
-
-**M5-B1 — avant mercredi 12h30**
-
-- [ ] `docker compose up --build` démarre les **3 services** de façon **reproductible**, healthchecks verts
-- [ ] `/metrics` exposé côté `model` **et** `backend`
-- [ ] Dashboard Grafana provisionné **automatiquement** (3 panels : vie / vitesse / comportement)
-- [ ] Workflow CI **vert**, image poussée sur GHCR, tag `v1.0.0-prod`
-- [ ] Le **contract test** du modèle bloque la release s'il est rouge
-      *(il vérifie le **contrat technique** de l'API — pas la performance du
-      modèle : ça, c'est l'évaluation continue de B2)*
-- [ ] `runbook.md` — 4 procédures (Service KO / Latence / Métrique modèle / Rollback)
-- [ ] `README.md` — schéma Mermaid de l'archi + démarrage en 3 commandes
-- [ ] Commits binôme : `Co-authored-by:` ou auteurs nominatifs
-
-**M5-B2 — avant vendredi 17h**
-
-- [ ] `scripts/evaluate_model.py` idempotent, sortie JSON parsable
-- [ ] `data/reference_set.csv` versionné
-- [ ] ≥ 2 runs MLflow comparables + **une preuve** (artefact CI `mlruns` ou
-      capture de `mlflow ui`) — ⚠️ `mlruns/` est gitignoré, **ne le commitez pas**
-- [ ] `evaluation_thresholds.md` — 4 métriques × baseline / seuil / justification
-- [ ] Étape CI `evaluate-model` **rouge sur dégradation volontaire** (testé une fois)
-- [ ] `tests/test_evaluation.py` — 3 tests minimum, `pytest -v` vert
-- [ ] Branche mergée en `main`, tag `v1.1.0-eval-continue`
-
-**Les deux briefs**
-
-- [ ] **Journal de bord** — 1 entrée par séance (trame `cas_usage_certif/journal-de-bord.ipynb`
-      du repo [`ia-dev-id-ressources`](https://github.com/Formation-SIMPLON-IA/ia-dev-id-ressources))
-
-→ Compétences visées : **C6 — transposer** (palier final) + **C9 — imiter**.
-
----
-
-## 🚀 Démarrage (le service `model` tourne déjà)
+### Lancer l'application
 
 ```bash
-# 1. Environnement de tests local (optionnel mais conseillé)
-python -m venv .venv && source .venv/bin/activate
+docker compose up --build -d
+docker compose ps
+```
+
+Les trois services applicatifs possèdent un healthcheck. Lorsque `model` est sain, le backend démarre ; lorsque le backend est sain, le frontend démarre.
+
+Pour consulter les logs ou arrêter l'application :
+
+```bash
+docker compose logs -f
+docker compose down
+```
+
+### Accès locaux
+
+| Composant | Adresse | Rôle |
+|---|---|---|
+| Frontend | <http://localhost:8088> | Formulaire de scoring |
+| API model | <http://localhost:8000/docs> | API interne de prédiction |
+| API backend | <http://localhost:8001/docs> | Orchestrateur exposé au frontend |
+| Prometheus | <http://localhost:9090> | Collecte et interrogation des métriques |
+| Cibles Prometheus | <http://localhost:9090/targets> | État du scraping des API |
+| Grafana | <http://localhost:3001> | Dashboard de supervision |
+
+Grafana utilise les identifiants locaux `admin` / `admin`. Le dashboard **Pyrenex Prod** est chargé automatiquement depuis le dépôt.
+
+## Tests
+
+Créer l'environnement Python et installer les dépendances de développement :
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements-dev.txt
-
-# 2. Vérifier que la base fournie passe les tests
-pytest -v services/model/tests
-
-# 3. Lancer ce qui est déjà câblé (model + prometheus + grafana)
-docker compose up --build
+pip install -r services/backend/requirements.txt
 ```
 
-> 🧰 **Avec `uv`** : `uv venv && source .venv/bin/activate` puis
-> **`uv pip install -r requirements-dev.txt`**.
-> ⚠️ Un venv créé par `uv venv` **n'embarque pas `pip`** : si vous voyez
-> `No module named pip`, c'est ça — utilisez `uv pip install`, pas `pip install`.
+Lancer tous les tests :
 
-> ⚠️ **Ports hôte** : frontend **8088** (pas 8080), Grafana **3001** (pas 3000)
-> — pour éviter les conflits courants. Model 8000, backend 8001, Prometheus 9090.
-
-Au départ, seuls `model`, `prometheus` et `grafana` démarrent : à vous
-d'ajouter `backend` + `frontend` et de compléter le reste (cf. TODO).
-
----
-
-## 📁 Structure
-
-```
-services/
-  model/        # FOURNI — API scoring M1-B2 + /metrics (ne pas réécrire)
-  backend/      # À COMPLÉTER — orchestrateur
-  frontend/     # À COMPLÉTER — formulaire nginx
-prometheus/     # FOURNI — scrape config
-grafana/provisioning/
-  datasources/  # FOURNI — datasource Prometheus
-  dashboards/   # provider fourni ; le dashboard JSON = à vous (tâche 9)
-.github/workflows/ci.yml   # squelette (job test fourni)
-runbook.md                 # template 4 sections
-scripts/evaluate_model_TEMPLATE.py   # B2 — MLflow pré-câblé
-data/reference_set_TEMPLATE.csv      # B2 — exemple à remplacer
-evaluation_thresholds_TEMPLATE.md    # B2 — seuils à justifier
-ressources/                # 📚 mini-cours d'appui (lecture juste-à-temps)
+```bash
+pytest -v
 ```
 
-> Le service `model` (déjà fourni) est votre **exemple de référence** : il
-> expose déjà `/metrics` — répliquez ce pattern sur le `backend`.
+Les tests couvrent les endpoints de santé, la validation des demandes, le scoring et le contrat technique du modèle sérialisé.
 
----
+## Architecture
 
-## 📚 Ressources
+```mermaid
+flowchart TB
+    user([Utilisateur])
 
-Voir [`./ressources/`](./ressources/) — 8 mini-cours + `liens_officiels.md`.
-Lecture **juste-à-temps** : ouvrez le mini-cours de la tâche en cours.
+    subgraph compose["Docker Compose"]
+        direction TB
 
----
+        frontend["Conteneur Frontend<br/>Nginx<br/>Port 8088"]
+        backend["Conteneur Backend<br/>FastAPI<br/>Port 8001"]
+        model["Conteneur Model<br/>FastAPI + modèle ML<br/>Port 8000"]
 
-## 🆘 Bloqué·e·s ?
+        prometheus["Conteneur Prometheus<br/>Port 9090"]
+        grafana["Conteneur Grafana<br/>Port 3001"]
 
-1. Relisez le mini-cours de la tâche en cours (`ressources/`).
-2. Le service `model` est votre exemple qui marche : copiez ses patterns.
-3. 30 min sur un bloquant → Discord `fil-M5`.
+        frontend -->|"POST /api/score"| backend
+        backend -->|"POST /predict"| model
+
+        prometheus -.->|"GET /metrics"| backend
+        prometheus -.->|"GET /metrics"| model
+        grafana -->|"Requêtes PromQL"| prometheus
+    end
+
+    user -->|"Saisie du formulaire"| frontend
+    frontend -->|"Affichage du résultat"| user
+    user -->|"Consultation"| prometheus
+    user -->|"Consultation"| grafana
+```
+
+## Services
+
+### Frontend
+
+Le frontend est une page statique servie par nginx. Il fournit le formulaire de demande de crédit et transmet les appels `/api/` au backend via un reverse proxy. Le navigateur n'appelle donc pas directement le service model.
+
+### Backend
+
+Le backend FastAPI valide les entrées avec Pydantic et expose :
+
+- `GET /health` : état du backend ;
+- `POST /score` : transmission d'une demande validée au modèle ;
+- `GET /metrics` : métriques HTTP et métier au format Prometheus.
+
+Il propage un identifiant de requête au service model. Un modèle injoignable produit une réponse `503`, tandis qu'une erreur HTTP du modèle produit une réponse `502`. Ces événements alimentent le compteur `backend_upstream_errors_total`, avec les labels `unreachable` et `http_error`.
+
+### Model
+
+Le service model charge le pipeline scikit-learn au démarrage et expose :
+
+- `GET /health` : disponibilité du modèle chargé ;
+- `GET /info` : version, provenance et métriques du modèle ;
+- `POST /predict` : classe de risque et probabilité de défaut ;
+- `GET /metrics` : métriques HTTP et métriques de prédiction.
+
+Les métriques métier `pyrenex_predictions_total` et `pyrenex_prediction_proba` décrivent respectivement la distribution des classes prédites et celle des probabilités de défaut.
+
+## Modèle de scoring
+
+Le modèle embarqué est `pyrenex_risk_v2`, version `v2.0.0`. Il provient du projet M1-B1, puis a été intégré à l'API M1-B2 avant d'être repris dans cette application. La configuration retenue, `balanced_shallow`, est un Random Forest équilibré de 100 arbres, limité à une profondeur de 6, avec `min_samples_leaf=10`.
+
+Le pipeline a été entraîné avec scikit-learn `1.5.1`. Les artefacts indissociables sont versionnés dans `services/model/models/` :
+
+- `pyrenex_risk_v2.joblib` : pipeline de prétraitement et modèle entraîné ;
+- `pyrenex_risk_v2.json` : version, variables, hyperparamètres, empreinte du dataset et résultats d'évaluation.
+
+Résultats sur le holdout final de 6 000 demandes jamais utilisées pour sélectionner le modèle :
+
+| Métrique | Valeur |
+|---|---:|
+| F1 macro | 0,5994 |
+| F1 défaut | 0,4299 |
+| ROC-AUC | 0,7307 |
+| Recall défaut | 0,6745 |
+| Précision défaut | 0,3155 |
+| Accuracy | 0,67 |
+
+Matrice de confusion au seuil de décision `0,5` :
+
+|  | Prédit remboursé | Prédit défaut |
+|---|---:|---:|
+| Vrai remboursé | 3 283 | 1 614 |
+| Vrai défaut | 359 | 744 |
+
+Le recall défaut élevé a motivé ce choix : le modèle détecte environ 67 % des défauts réels, au prix d'un nombre plus important de faux positifs.
+
+## Monitoring
+
+Prometheus interroge toutes les cinq secondes les endpoints `/metrics` du backend et du modèle. La métrique `up` indique si chaque cible est joignable, y compris lorsqu'un service arrêté ne peut plus publier ses propres compteurs.
+
+Grafana utilise Prometheus comme datasource et charge automatiquement le dashboard `grafana/provisioning/dashboards/pyrenex_prod.json`. Son rafraîchissement est configuré à cinq secondes.
+
+| Panel | Métrique exploitée | Lecture |
+|---|---|---|
+| Trafic : requêtes par seconde | `http_requests_total` | Débit métier du backend et du modèle, hors `/health` et `/metrics` |
+| Fiabilité : erreurs d'appel au modèle | `backend_upstream_errors_total` | Taux d'erreurs réseau et HTTP entre le backend et le modèle |
+| Vie : services disponibles | `up` | `1` si Prometheus joint le service, `0` en cas de panne |
+| Vitesse : latence p95 | `http_request_duration_seconds_bucket` | Durée sous laquelle se terminent 95 % des requêtes |
+| Comportement : distribution des prédictions | `pyrenex_predictions_total` | Évolution des classes « défaut » et « pas défaut » |
+
+Le panel de trafic exclut les appels techniques de Prometheus et des healthchecks afin de représenter uniquement les requêtes applicatives. Le panel de disponibilité repose sur `up`, car un service arrêté ne peut plus publier lui-même ses compteurs.
+
+## CI/CD
+
+```mermaid
+flowchart LR
+    trigger["Pull request vers main<br/>Push sur main<br/>Tag v*"]
+    model_tests["Tests Model<br/>API + contrat du modèle"]
+    backend_tests["Tests Backend<br/>API"]
+    event{"Événement push ?"}
+    build["Build de l'image<br/>Docker Model"]
+    ghcr[("GitHub Container Registry")]
+    end_pr["Validation de la PR"]
+
+    trigger --> model_tests
+    model_tests --> backend_tests
+    backend_tests --> event
+    event -->|"Non : pull request"| end_pr
+    event -->|"Oui : main ou tag"| build
+    build --> ghcr
+```
+
+Le workflow `.github/workflows/ci.yml` s'exécute sur les pull requests vers `main`, les push sur `main` et les tags commençant par `v`.
+
+Le job `test` installe séparément les dépendances des services model et backend, puis exécute leurs suites pytest. Le job `build-and-push` dépend de sa réussite : si un test échoue, aucune image n'est publiée.
+
+Après un push ou un tag valide, l'image du service model est construite et publiée dans GitHub Container Registry :
+
+```text
+ghcr.io/jeremy-formation-ia/m5-b1-model:<branche-ou-tag>
+```
+
+## Structure du dépôt
+
+```text
+.
+├── .github/workflows/
+│   └── ci.yml                         # Tests, build et publication GHCR
+├── grafana/provisioning/
+│   ├── dashboards/
+│   │   ├── dashboards.yml             # Provider de dashboards
+│   │   └── pyrenex_prod.json          # Dashboard Pyrenex provisionné
+│   └── datasources/
+│       └── datasource.yml             # Datasource Prometheus
+├── prometheus/
+│   └── prometheus.yml                 # Scraping backend et model
+├── services/
+│   ├── backend/
+│   │   ├── app/                       # API d'orchestration FastAPI
+│   │   ├── tests/                     # Tests du backend
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   ├── frontend/
+│   │   ├── html/                      # Formulaire et styles
+│   │   ├── Dockerfile
+│   │   └── nginx.conf                 # Serveur statique et reverse proxy
+│   └── model/
+│       ├── app/                       # API de prédiction et métriques
+│       ├── models/                    # Modèle v2 et métadonnées
+│       ├── tests/                     # Tests API et contrat du modèle
+│       ├── Dockerfile
+│       └── requirements.txt
+├── docker-compose.yml                 # Orchestration des cinq services
+├── requirements-dev.txt               # Dépendances de test et d'évaluation
+└── runbook.md                          # Procédures opérationnelles
+```
