@@ -1,24 +1,20 @@
-"""Service `backend` — orchestrateur (SQUELETTE À COMPLÉTER).
+"""Backend orchestrator service.
 
-Rôle attendu : exposé au navigateur (via le frontend nginx), il valide
-l'entrée avec le **même schéma Pydantic** que le modèle, appelle le service
-`model` en interne (`http://model:8000/predict`), et expose `/health`,
-`/score`, `/metrics`.
-
-👉 Inspirez-vous du service `model` (déjà fourni) pour le pattern `/metrics`
-   et le middleware de logging. Mini-cours : `02_FastAPI_metrics_Prometheus`.
+Exposed to the browser (via the nginx frontend), validates input with the
+**same Pydantic schema** as the model, calls the `model` service internally
+(`http://model:8000/predict`), and exposes `/health`, `/score`.
 """
 from __future__ import annotations
 
 import os
 
-from fastapi import FastAPI, Request
+import httpx
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.middleware import LoggingMiddleware
 from app.schemas import HealthResponse, LoanApplication, Prediction
 
-# URL du service model — configurable par variable d'env (dev/staging/prod)
 MODEL_URL = os.environ.get("MODEL_URL", "http://model:8000")
 ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "http://localhost:8088").split(",")
 
@@ -38,17 +34,35 @@ app.add_middleware(
 
 @app.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
-    """Liveness du backend (ne dépend PAS du model)."""
+    """Backend liveness (does NOT depend on the model)."""
     return HealthResponse(status="ok")
 
 
-# TODO 2 — route POST /score :
-#   - reçoit une LoanApplication (validée par Pydantic),
-#   - appelle MODEL_URL/predict en interne (httpx async),
-#   - propage le header X-Request-ID,
-#   - gère les erreurs : model injoignable → 503, model en erreur → 502,
-#   - retourne un objet Prediction.
-#
-# @app.post("/score", response_model=Prediction)
-# async def score(application: LoanApplication, request: Request) -> Prediction:
-#     ...
+@app.post("/score", response_model=Prediction)
+async def score(application: LoanApplication, request: Request) -> Prediction:
+    """Validate input, call the model service, return the prediction.
+
+    - Model unreachable -> 503
+    - Model error (5xx) -> 502
+    """
+    request_id = getattr(request.state, "request_id", "n/a")
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{MODEL_URL}/predict",
+                json=application.model_dump(),
+                headers={"X-Request-ID": request_id},
+            )
+    except httpx.RequestError:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Model service unavailable")
+
+    if resp.status_code >= 500:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Model service error")
+
+    data = resp.json()
+    return Prediction(
+        prediction=data["prediction"],
+        probability=data["probability"],
+        model_version=data["model_version"],
+        request_id=request_id,
+    )
