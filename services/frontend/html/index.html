@@ -117,7 +117,6 @@
 
   <script>
     const form = document.getElementById('scoreForm');
-    const workspace = document.querySelector('.workspace');
     const result = document.getElementById('result');
     const randomDataButton = document.getElementById('randomData');
     const numericFields = ['loan_amnt','int_rate','installment','annual_inc','dti','delinq_2yrs','fico_range_low','revol_util'];
@@ -160,7 +159,6 @@
       referenceColumns.forEach((column, index) => {
         form.elements[column].value = row[index];
       });
-      workspace.classList.remove('has-result');
       result.style.display = 'none';
     });
 
@@ -172,7 +170,6 @@
         payload[key] = numericFields.includes(key) ? Number(value) : value;
       }
       result.classList.remove('ok', 'ko');
-      workspace.classList.add('has-result');
       result.style.display = 'block';
       result.textContent = 'Évaluation en cours…';
       try {
