@@ -1,5 +1,6 @@
 services:
   model:
+    image: ghcr.io/jeremy-formation-ia/m5-b1-model:${MODEL_TAG:-main}
     build: ./services/model
     ports:
       - "8000:8000"

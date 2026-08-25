@@ -66,9 +66,11 @@ ou tag de release défectueux identifié.
 
 **Actions** :
 1. `git tag --sort=-v:refname | head -5` — identifier le dernier tag stable.
-2. `docker pull ghcr.io/<repo>-model:<tag>` puis `docker compose up --build`
+2. Définir le tag de rollback : `export MODEL_TAG=<tag>`
+   (ou éditer `docker-compose.yml` — variable `MODEL_TAG`, défaut `main`).
+3. `docker compose pull model && docker compose up -d` — redémarrer
    avec l'image du tag précédent.
-3. Vérifier les healthchecks (`docker compose ps`) et `/metrics`.
+4. Vérifier les healthchecks (`docker compose ps`) et `/metrics`.
 
 **Qui appeler** : Astreinte FastIA.
 
