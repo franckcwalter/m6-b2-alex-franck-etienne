@@ -25,16 +25,24 @@ jobs:
   #   qui DOIT bloquer (exit≠0) si une métrique passe sous les seuils.
   #   Uploadez mlruns/ en artefact.
 
-  # TODO 2 — job `build-and-push` :
-  #   needs: [test, evaluate-model] ; if: push ; login GHCR ;
-  #   `docker compose build` ; tag + push de l'image model ; tag de release.
-  #
-  #   Deux pièges qui vous coûteront la fin de journée si vous les ignorez :
-  #   a) GHCR n'accepte QUE des noms d'image en **minuscules**. Votre repo
-  #      s'appelle `Formation-SIMPLON-IA/M5-B1-...` → passez le nom dans
-  #      `tr '[:upper:]' '[:lower:]'` avant le `docker tag`, sinon :
-  #      « invalid reference format: repository name must be lowercase ».
-  #   b) `docker compose images -q model` ne liste que les images des
-  #      conteneurs **créés**. Après un simple `docker compose build`, elle
-  #      renvoie une chaîne vide et le `docker tag` casse. Buildez l'image à
-  #      pousser avec `docker build -t "$IMG:$TAG" ./services/model`.
+  build-and-push:
+    needs: test # needs: [test, evaluate-model] après le TODO 1
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build model image
+        run: |
+          IMG="ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')-model"
+          TAG="${GITHUB_REF_NAME//\//-}"
+          docker build -t "$IMG:$TAG" ./services/model
+          docker push "$IMG:$TAG"
