@@ -15,3 +15,6 @@ mlruns/
 .DS_Store
 .idea/
 *.swp
+
+
+*log
