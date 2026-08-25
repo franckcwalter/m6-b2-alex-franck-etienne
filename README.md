@@ -49,10 +49,11 @@ pip install -r requirements-dev.txt
 pip install -r services/backend/requirements.txt
 ```
 
-Lancer tous les tests :
+Lancer les tests de chaque service séparément :
 
 ```bash
-pytest -v
+pytest -v services/model/tests
+pytest -v services/backend/tests
 ```
 
 Les tests couvrent les endpoints de santé, la validation des demandes, le scoring et le contrat technique du modèle sérialisé.
