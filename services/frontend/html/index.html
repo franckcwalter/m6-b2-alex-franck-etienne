@@ -8,6 +8,12 @@
 </head>
 <body>
   <main>
+  <div class="page-tools">
+    <button type="button" id="colorBlindToggle" class="palette-toggle" aria-pressed="false">
+      <span aria-hidden="true">◐</span>
+      <span class="palette-toggle-label">Activer les couleurs accessibles</span>
+    </button>
+  </div>
   <p class="eyebrow">Pyrenex Crédit</p>
   <h1>Évaluation du risque de défaut</h1>
   <p class="intro">Renseignez les caractéristiques du dossier pour obtenir une estimation instantanée du risque de crédit.</p>
@@ -119,7 +125,34 @@
     const form = document.getElementById('scoreForm');
     const result = document.getElementById('result');
     const randomDataButton = document.getElementById('randomData');
+    const colorBlindToggle = document.getElementById('colorBlindToggle');
     const numericFields = ['loan_amnt','int_rate','installment','annual_inc','dti','delinq_2yrs','fico_range_low','revol_util'];
+
+    const setColorBlindPalette = (enabled) => {
+      document.documentElement.classList.toggle('color-blind', enabled);
+      colorBlindToggle.setAttribute('aria-pressed', String(enabled));
+      colorBlindToggle.querySelector('.palette-toggle-label').textContent = enabled
+        ? 'Revenir aux couleurs standard'
+        : 'Activer les couleurs accessibles';
+    };
+
+    let colorBlindEnabled = false;
+    try {
+      colorBlindEnabled = localStorage.getItem('colorBlindPalette') === 'true';
+    } catch (_) {
+      // La palette reste utilisable lorsque le stockage du navigateur est bloqué.
+    }
+    setColorBlindPalette(colorBlindEnabled);
+
+    colorBlindToggle.addEventListener('click', () => {
+      colorBlindEnabled = !document.documentElement.classList.contains('color-blind');
+      setColorBlindPalette(colorBlindEnabled);
+      try {
+        localStorage.setItem('colorBlindPalette', String(colorBlindEnabled));
+      } catch (_) {
+        // Le choix s'applique à la session même sans stockage persistant.
+      }
+    });
 
     // Lignes complètes de data/reference_set_TEMPLATE.csv (loan_status exclu).
     const referenceColumns = ['loan_amnt','term','int_rate','installment','grade','emp_length','home_ownership','annual_inc','verification_status','purpose','dti','delinq_2yrs','fico_range_low','revol_util'];
