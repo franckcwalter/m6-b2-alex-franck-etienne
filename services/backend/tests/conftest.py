@@ -21,14 +21,18 @@ _real_async_client = httpx.AsyncClient
 
 
 @pytest.fixture
-def client(monkeypatch):
+def client(monkeypatch, request):
     """FastAPI TestClient with the model service mocked via httpx.MockTransport."""
     import app.main as main_module
     from app.main import app
     from fastapi.testclient import TestClient
 
+    upstream_behavior = getattr(request, "param", 200)
+
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json=MOCK_PREDICTION)
+        if upstream_behavior == "unreachable":
+            raise httpx.ConnectError("Model unavailable", request=request)
+        return httpx.Response(upstream_behavior, json=MOCK_PREDICTION)
 
     transport = httpx.MockTransport(handler)
     monkeypatch.setattr(
