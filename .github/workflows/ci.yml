@@ -2,7 +2,8 @@ name: CI/CD Pyrenex Prod
 
 on:
   push:
-    branches: [main]
+    # Déclenche aussi la CI sur la branche de livraison individuelle M5-B2.
+    branches: [main, m5-b2-franck]
     tags: ["v*"]
   pull_request:
     branches: [main]
@@ -19,18 +20,35 @@ jobs:
         run: pip install -r services/model/requirements.txt pytest httpx
       - name: Tests unitaires + contract test du modèle
         run: pytest -v services/model/tests
+      - name: Tests de l'évaluation continue
+        run: pytest -v tests/test_evaluate_model.py
       - name: Install backend deps
         run: pip install -r services/backend/requirements.txt pytest httpx
       - name: Tests unitaires backend
         run: pytest -v services/backend/tests
 
-  # TODO 1 (M5-B2) — job `evaluate-model` :
-  #   needs: test ; lance `python scripts/evaluate_model.py --release-tag <ref>`
-  #   qui DOIT bloquer (exit≠0) si une métrique passe sous les seuils.
-  #   Uploadez mlruns/ en artefact.
+  evaluate-model:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install evaluation dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Evaluate model against golden baseline
+        run: python scripts/evaluate_model.py --release-tag "${{ github.head_ref || github.ref_name }}"
+      - name: Upload MLflow runs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlflow-runs-${{ github.run_id }}
+          path: mlruns/
+          if-no-files-found: error
 
   build-and-push:
-    needs: test # needs: [test, evaluate-model] après le TODO 1
+    needs: [test, evaluate-model]
     if: github.event_name == 'push'
     permissions:
       contents: read
