@@ -38,8 +38,7 @@ jobs:
       - name: Install evaluation dependencies
         run: pip install -r requirements-dev.txt
       - name: Evaluate model against golden baseline
-        # Test rouge temporaire : prouve qu'une régression bloque la publication.
-        run: python scripts/evaluate_model.py --release-tag "${{ github.head_ref || github.ref_name }}" --degrade
+        run: python scripts/evaluate_model.py --release-tag "${{ github.head_ref || github.ref_name }}"
       - name: Upload MLflow runs
         if: always()
         uses: actions/upload-artifact@v4
