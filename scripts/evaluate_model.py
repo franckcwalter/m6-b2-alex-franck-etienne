@@ -23,7 +23,6 @@ import sys
 from pathlib import Path
 
 import joblib
-import mlflow
 import numpy as np
 import pandas as pd
 from sklearn.metrics import f1_score, recall_score, roc_auc_score
@@ -187,6 +186,8 @@ def freeze_baseline(model, df: pd.DataFrame, meta: dict) -> dict:
 
 
 def main() -> int:
+    import mlflow
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--release-tag", default="dev")
     parser.add_argument("--degrade", action="store_true")
