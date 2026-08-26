@@ -222,6 +222,11 @@ def main() -> int:
     metrics = compute_metrics(model, df, meta)
     baseline = load_baseline()
     violations = check_thresholds(metrics, baseline)
+    model_params = {
+        name: value
+        for name, value in meta["hyperparameters"].items()
+        if name != "n_jobs"
+    }
 
     mlflow.set_experiment("pyrenex-eval-continue")
     with mlflow.start_run(run_name=args.release_tag):
@@ -231,6 +236,8 @@ def main() -> int:
                 "release_tag": args.release_tag,
                 "reference_set": str(REFERENCE_SET.relative_to(ROOT)),
                 "n_reference": len(df),
+                "dataset_sha256": meta["dataset_sha256"],
+                **model_params,
             }
         )
         mlflow.log_metrics(metrics)
